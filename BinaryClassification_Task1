@@ -6,8 +6,8 @@ from LogisticRegression import MyLogisticRegression
 from LogisticRegression import calculate_metrics
 
 # CONFIG
-FILE_NAME = 'ap_dataset.csv'  # Numele fișierului tău
-OUTPUT_CSV = 'ProcessedDataset.csv' # Numele fișierului procesat pe care vrei să îl salvezi
+FILE_NAME = 'ap_dataset.csv'
+OUTPUT_CSV = 'ProcessedDataset.csv'
 TARGET_COL = 'Crazy Sauce'
 
 print("- RUNNING TASK 1: Will the client include the sauce?")
@@ -79,7 +79,7 @@ for name, val in coeffs_sorted[-5:]:
 
 # Plot Cost History
 plt.plot(model.cost_history)
-plt.title("Evoluția Costului (Loss) - Task 1")
-plt.xlabel("Epoci")
+plt.title("Cost Evolution (Loss)")
+plt.xlabel("Epochs")
 plt.ylabel("Cost")
 plt.show()
