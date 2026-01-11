@@ -1,0 +1,85 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from DataSanitize import prepare_data
+from LogisticRegression import MyLogisticRegression
+from LogisticRegression import calculate_metrics
+
+# CONFIG
+FILE_NAME = 'ap_dataset.csv'  # Numele fișierului tău
+OUTPUT_CSV = 'ProcessedDataset.csv' # Numele fișierului procesat pe care vrei să îl salvezi
+TARGET_COL = 'Crazy Sauce'
+
+print("- RUNNING TASK 1: Will the client include the sauce?")
+try:
+    df_final = prepare_data(FILE_NAME)
+    df_final.to_csv(OUTPUT_CSV)
+
+except Exception as e:
+    print(f"Critical error when reading file: {e}")
+    exit()
+
+# Keep only receipts that include 'Crazy Schnitzel'
+if 'Crazy Schnitzel' not in df_final.columns:
+    print("Eroare: Produsul 'Crazy Schnitzel' nu există în date.")
+    exit()
+
+df_task = df_final[df_final['Crazy Schnitzel'] > 0].copy()
+print(f"\nCrazy Schnitzel receipts: {len(df_task)}")
+
+# Prepairing X and y
+if TARGET_COL not in df_task.columns:
+    print(f"Error: '{TARGET_COL}' doesn't exist.")
+    exit()
+
+# Target vector (0 or 1)
+y = (df_task[TARGET_COL] > 0).astype(int).values
+
+# Remove target (Leakage), identifiers and filtering feature
+cols_to_drop = [TARGET_COL, 'Crazy Schnitzel', 'data_bon'] 
+X_df = df_task.drop(columns=[c for c in cols_to_drop if c in df_task.columns])
+X = X_df.values
+
+# Standard Scaling - critical for convergence
+mean = X.mean(axis=0)
+std = X.std(axis=0)
+X_scaled = (X - mean) / (std + 1e-8)
+
+# Sequential split (80 Train / 20 Test)
+split_idx = int(0.8 * len(X))
+X_train, X_test = X_scaled[:split_idx], X_scaled[split_idx:]
+y_train, y_test = y[:split_idx], y[split_idx:]
+
+print(f"Train: {X_train.shape[0]} receipts, Test: {X_test.shape[0]} receipts\n")
+
+# Training the model
+model = MyLogisticRegression(learning_rate=0.1, num_iterations=2000, verbose=True)
+model.fit(X_train, y_train)
+
+# Evaluation
+y_pred_train = model.predict(X_train)
+y_pred_test = model.predict(X_test)
+
+calculate_metrics(y_train, y_pred_train, "TRAIN")
+calculate_metrics(y_test, y_pred_test, "TEST")
+
+print("\n>>> Product Analysis (Top Factors)")
+features = list(X_df.columns)
+coefs = model.weights
+
+coeffs_sorted = sorted(zip(features, coefs), key=lambda x: x[1], reverse=True)
+
+print("Top 5 features that INCREASE the chance for Crazy Sauce:")
+for name, val in coeffs_sorted[:5]:
+    print(f"  {name}: {val:.4f}")
+
+print("\nTop 5 features that DECREASE the chance for Crazy Sauce:")
+for name, val in coeffs_sorted[-5:]:
+    print(f"  {name}: {val:.4f}")
+
+# Plot Cost History
+plt.plot(model.cost_history)
+plt.title("Evoluția Costului (Loss) - Task 1")
+plt.xlabel("Epoci")
+plt.ylabel("Cost")
+plt.show()
